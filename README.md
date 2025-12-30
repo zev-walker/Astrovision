@@ -215,5 +215,3 @@ Common issues and solutions:
 ---
 
 **Built with ❤️ for Astronomy and AI**
-
-*Remember: This is your portfolio project. Be proud of it!* ⭐
