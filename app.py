@@ -451,7 +451,7 @@ def main():
                 img_display, img_array = load_and_preprocess_image(uploaded_file)
                 
                 if img_display:
-                    st.image(img_display, use_container_width=True)
+                    st.image(img_display, use_column_width=True)
                     
                     # Image info
                     st.caption(f"**Filename:** {uploaded_file.name}")
@@ -497,7 +497,7 @@ def main():
                     for k, v in sorted(result['all_probabilities'].items(), 
                                      key=lambda x: x[1], reverse=True)
                 ])
-                st.dataframe(prob_df[["Galaxy Type", "Probability"]], use_container_width=True)
+                st.dataframe(prob_df[["Galaxy Type", "Probability"]], use_column_width=True)
                 
                 # Galaxy information
                 st.markdown("---")
@@ -702,7 +702,8 @@ def main():
             'User': ['User_123', 'User_456', 'User_789', 'User_123', 'User_321']
         })
         
-        st.dataframe(recent_data, use_container_width=True)
+        st.dataframe(recent_data, use_column_width=True)
 
 if __name__ == "__main__":
+
     main()
