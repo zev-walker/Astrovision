@@ -8,6 +8,7 @@ import google.generativeai as genai
 from PIL import Image
 from transformers import CLIPProcessor, CLIPModel
 import PyPDF2
+import os
 
 # ==========================================
 # PAGE CONFIGURATION
@@ -40,14 +41,47 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 🔑 API CONFIGURATION (SECURE)
+# 🔑 API & MODEL AUTO-CONFIGURATION
 # ==========================================
-# This looks for the key in Streamlit Secrets (Cloud) or secrets.toml (Local)
+# This function automatically finds a working model name to fix the 404 error
+@st.cache_resource
+def get_valid_model_name(api_key):
+    try:
+        genai.configure(api_key=api_key)
+        # Ask Google for list of all models
+        models = list(genai.list_models())
+        
+        # Priority list (We prefer Flash, then Pro)
+        preferences = ["gemini-1.5-flash", "gemini-1.5-flash-001", "gemini-pro", "gemini-1.0-pro"]
+        
+        available_names = [m.name.replace("models/", "") for m in models if 'generateContent' in m.supported_generation_methods]
+        
+        # 1. Check if any of our preferred models exist
+        for pref in preferences:
+            if pref in available_names:
+                return pref
+        
+        # 2. Fallback: Just take the first one that works
+        if available_names:
+            return available_names[0]
+            
+        return None
+    except Exception as e:
+        return None
+
+# Check for Key in Secrets
+active_key = None
+valid_model_name = None
+
 if "GEMINI_API_KEY" in st.secrets:
-    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    api_status = "✅ API Connected"
+    active_key = st.secrets["GEMINI_API_KEY"]
+    valid_model_name = get_valid_model_name(active_key)
+    
+    if valid_model_name:
+        api_status = f"✅ Connected ({valid_model_name})"
+    else:
+        api_status = "⚠️ Key found, but no models available"
 else:
-    # If key is missing, we don't crash, but we warn the user
     api_status = "⚠️ API Key Missing"
 
 # ==========================================
@@ -55,20 +89,12 @@ else:
 # ==========================================
 @st.cache_resource
 def load_deep_learning_model():
-    """
-    Loads the CLIP (Contrastive Language-Image Pre-Training) model.
-    This is a Vision Transformer (ViT) that connects images to text concepts.
-    """
     model_id = "openai/clip-vit-base-patch32"
     model = CLIPModel.from_pretrained(model_id)
     processor = CLIPProcessor.from_pretrained(model_id)
     return model, processor
 
 def classify_galaxy_deep_learning(image, model, processor):
-    """
-    Performs Zero-Shot Classification using Vector Similarity.
-    """
-    # 1. Define the Physics Concepts (Classes)
     labels = [
         "a spiral galaxy with rotating arms",
         "a smooth elliptical galaxy",
@@ -76,8 +102,6 @@ def classify_galaxy_deep_learning(image, model, processor):
         "an irregular galaxy with no shape",
         "two merging galaxies colliding"
     ]
-    
-    # Map descriptions back to simple names for the UI
     label_map = {
         "a spiral galaxy with rotating arms": "Spiral Galaxy",
         "a smooth elliptical galaxy": "Elliptical Galaxy",
@@ -85,31 +109,12 @@ def classify_galaxy_deep_learning(image, model, processor):
         "an irregular galaxy with no shape": "Irregular Galaxy",
         "two merging galaxies colliding": "Merger"
     }
-
-    # 2. Preprocess Image & Text (The "Deep Learning" Input)
-    inputs = processor(
-        text=labels, 
-        images=image, 
-        return_tensors="pt", 
-        padding=True
-    )
-
-    # 3. Forward Pass (Run the Model)
+    inputs = processor(text=labels, images=image, return_tensors="pt", padding=True)
     with torch.no_grad():
         outputs = model(**inputs)
+    probs = outputs.logits_per_image.softmax(dim=1).numpy()[0]
     
-    # 4. Calculate Similarity (Logits to Probabilities)
-    logits_per_image = outputs.logits_per_image  # Similarity score
-    probs = logits_per_image.softmax(dim=1)      # Convert to percentage
-
-    # 5. Format Results
-    prob_values = probs.numpy()[0]
-    results = {}
-    for i, label_desc in enumerate(labels):
-        simple_name = label_map[label_desc]
-        results[simple_name] = float(prob_values[i])
-        
-    return results
+    return {label_map[labels[i]]: float(probs[i]) for i in range(len(labels))}
 
 # ==========================================
 # 📄 NLP & PDF PROCESSING
@@ -128,61 +133,47 @@ def main():
     st.title("🌌 AstroVision: Deep Learning for Astronomy")
     st.markdown("### 🔭 Automated Galaxy Morphology & Research Analysis")
 
-    # --- SIDEBAR CONFIG ---
+    # --- SIDEBAR ---
     st.sidebar.header("⚙️ Configuration")
-    st.sidebar.text(api_status) # Shows if the key was found
-
-    if api_status == "⚠️ API Key Missing":
-        st.sidebar.warning("Go to Streamlit Settings -> Secrets and add GEMINI_API_KEY")
+    st.sidebar.text(api_status)
+    
+    if "Missing" in api_status:
+        st.sidebar.warning("Add GEMINI_API_KEY to Streamlit Secrets.")
 
     page = st.sidebar.radio("Select Module:", ["🔭 Galaxy Classifier (Deep Learning)", "📄 Research Assistant (NLP)"])
 
     # --- MODULE 1: GALAXY CLASSIFIER ---
     if page == "🔭 Galaxy Classifier (Deep Learning)":
         st.header("Deep Learning Morphology Classifier")
-        st.info("Using **CLIP (Vision Transformer)** for Zero-Shot classification. No manual training required.")
+        st.info("Using **CLIP (Vision Transformer)** for Zero-Shot classification.")
         
         uploaded_file = st.file_uploader("Upload a Galaxy Image", type=['jpg', 'png', 'jpeg'])
         
         if uploaded_file:
             col1, col2 = st.columns([1, 1])
-            
             with col1:
                 image = Image.open(uploaded_file)
                 st.image(image, caption="Observation", use_column_width=True)
-            
             with col2:
                 if st.button("Analyze Structure"):
                     with st.spinner("Running Vision Transformer..."):
-                        # Load Model
                         model, processor = load_deep_learning_model()
-                        
-                        # Run Inference
                         predictions = classify_galaxy_deep_learning(image, model, processor)
-                        
-                        # Sort and Get Top Result
                         sorted_preds = sorted(predictions.items(), key=lambda x: x[1], reverse=True)
                         top_class, top_score = sorted_preds[0]
                         
-                        # Display Top Result
                         st.success(f"**Classification: {top_class}**")
                         st.metric("Confidence Score", f"{top_score*100:.2f}%")
-                        
-                        # Display Bar Chart of all probabilities
-                        st.write("---")
-                        st.write("**Probability Distribution:**")
                         st.bar_chart(predictions)
 
     # --- MODULE 2: RESEARCH ASSISTANT ---
     elif page == "📄 Research Assistant (NLP)":
         st.header("Research Paper Analysis")
-        st.markdown("Uses **Large Language Models (LLM)** to synthesize astrophysics papers.")
-        
         uploaded_pdf = st.file_uploader("Upload Research Paper (PDF)", type=['pdf'])
         
         if uploaded_pdf:
-            if api_status == "⚠️ API Key Missing":
-                st.error("Cannot analyze PDF. API Key is missing in Settings.")
+            if not valid_model_name:
+                st.error("Cannot analyze. API Key missing or no valid models found.")
             else:
                 with st.spinner("Reading PDF structure..."):
                     pdf_text = extract_text_from_pdf(uploaded_pdf)
@@ -190,26 +181,26 @@ def main():
                 
                 tab1, tab2 = st.tabs(["📝 Summarization", "💬 Q&A System"])
                 
-                # Sub-module: Summarizer
                 with tab1:
                     detail_level = st.select_slider("Summary Detail", options=["Brief Abstract", "Key Findings", "Comprehensive Analysis"])
                     if st.button("Generate Summary"):
-                        with st.spinner("Synthesizing..."):
+                        with st.spinner(f"Synthesizing using {valid_model_name}..."):
                             try:
-                                model = genai.GenerativeModel("gemini-pro")
+                                # USE THE AUTO-DETECTED MODEL NAME HERE
+                                model = genai.GenerativeModel(valid_model_name)
                                 prompt = f"You are an expert astrophysicist. Summarize this paper. \nLevel: {detail_level}. \nText: {pdf_text[:50000]}"
                                 response = model.generate_content(prompt)
                                 st.markdown(response.text)
                             except Exception as e:
                                 st.error(f"Error: {e}")
 
-                # Sub-module: Q&A
                 with tab2:
                     question = st.text_input("Ask a technical question about the paper:")
                     if st.button("Analyze Question") and question:
                         with st.spinner("Consulting paper..."):
                             try:
-                                model = genai.GenerativeModel("gemini-pro")
+                                # USE THE AUTO-DETECTED MODEL NAME HERE
+                                model = genai.GenerativeModel(valid_model_name)
                                 prompt = f"Based STRICTLY on this paper, answer: {question}. \nPaper Text: {pdf_text[:50000]}"
                                 response = model.generate_content(prompt)
                                 st.write(response.text)
@@ -218,4 +209,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
