@@ -196,7 +196,7 @@ def main():
                     if st.button("Generate Summary"):
                         with st.spinner("Synthesizing..."):
                             try:
-                                model = genai.GenerativeModel("gemini-1.5-flash")
+                                model = genai.GenerativeModel("gemini-pro")
                                 prompt = f"You are an expert astrophysicist. Summarize this paper. \nLevel: {detail_level}. \nText: {pdf_text[:50000]}"
                                 response = model.generate_content(prompt)
                                 st.markdown(response.text)
@@ -209,7 +209,7 @@ def main():
                     if st.button("Analyze Question") and question:
                         with st.spinner("Consulting paper..."):
                             try:
-                                model = genai.GenerativeModel("gemini-1.5-flash")
+                                model = genai.GenerativeModel("gemini-pro")
                                 prompt = f"Based STRICTLY on this paper, answer: {question}. \nPaper Text: {pdf_text[:50000]}"
                                 response = model.generate_content(prompt)
                                 st.write(response.text)
@@ -218,3 +218,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
