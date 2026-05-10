@@ -1,216 +1,142 @@
-# 🌌 AstroVision - Deployment Guide
+# 🌌 AstroVision
+### Deep Learning Galaxy Morphology & Research Assistant
 
-## 📦 What You Have
-- ✅ `app.py` - Complete application (single file)
-- ✅ `requirements.txt` - All dependencies
-
-## 🚀 Quick Deployment Steps
-
-### Step 1: Create GitHub Repository
-
-1. Go to **GitHub.com** and sign in
-2. Click **"New"** to create a new repository
-3. Name it: `astrovision`
-4. Make it **Public**
-5. ✅ Check "Add a README file"
-6. Click **"Create repository"**
-
-### Step 2: Upload Files to GitHub
-
-**Option A: Using GitHub Website (Easiest)**
-
-1. In your new repository, click **"Add file"** → **"Upload files"**
-2. Drag and drop:
-   - `app.py`
-   - `requirements.txt`
-3. Add commit message: "Initial commit - AstroVision app"
-4. Click **"Commit changes"**
-
-**Option B: Using VS Code (If you prefer)**
-
-```bash
-# In VS Code terminal (make sure you're in AstroVision folder)
-
-# Initialize git
-git init
-
-# Add files
-git add app.py requirements.txt
-
-# Commit
-git commit -m "Initial commit - AstroVision app"
-
-# Link to your GitHub repo (replace YOUR-USERNAME)
-git remote add origin https://github.com/YOUR-USERNAME/astrovision.git
-
-# Push to GitHub
-git branch -M main
-git push -u origin main
-```
-
-### Step 3: Deploy on Streamlit Cloud
-
-1. Go to **https://share.streamlit.io**
-2. Sign in with your GitHub account
-3. Click **"New app"**
-4. Fill in:
-   - **Repository:** `YOUR-USERNAME/astrovision`
-   - **Branch:** `main`
-   - **Main file path:** `app.py`
-5. Click **"Deploy!"**
-
-**⏰ Wait 2-5 minutes for deployment...**
-
-### Step 4: Your App is Live! 🎉
-
-You'll get a URL like: `https://your-username-astrovision-app-xyz.streamlit.app`
-
-Share this URL with anyone!
+AstroVision is a two-module Streamlit application that combines a zero-shot Vision Transformer (CLIP) for galaxy image classification with a Gemini-powered LLM for astronomy research paper analysis.
 
 ---
 
-## 🧪 Testing Locally (Optional)
+## ✨ Features
 
-Before deploying, you can test locally:
+### 🔭 Module 1 — Galaxy Classifier (Deep Learning)
+
+Upload a galaxy image and AstroVision will classify it using **CLIP (`openai/clip-vit-base-patch32`)**, a zero-shot Vision Transformer from OpenAI via Hugging Face Transformers. No fine-tuning required — classification runs entirely locally via PyTorch.
+
+**Supported galaxy types:**
+- Spiral Galaxy
+- Elliptical Galaxy
+- Edge-on Disk
+- Irregular Galaxy
+- Merger (two colliding galaxies)
+
+**Output:**
+- Top predicted class with confidence score
+- Bar chart of probability distribution across all 5 classes
+
+---
+
+### 📄 Module 2 — Research Assistant (NLP)
+
+Upload an astronomy research paper (PDF) and interact with it using **Google Gemini**.
+
+**Sub-features:**
+- **📝 Summarization** — Generate a summary at one of three detail levels: *Brief Abstract*, *Key Findings*, or *Comprehensive Analysis*
+- **💬 Q&A System** — Ask technical questions about the paper; Gemini answers strictly based on the paper's content
+
+PDF text is extracted using `PyPDF2`. Up to 50,000 characters of the paper are sent to Gemini per request.
+
+---
+
+## 🛠️ Tech Stack
+
+| Component | Library / Service |
+|---|---|
+| App framework | Streamlit |
+| Vision model | CLIP (`openai/clip-vit-base-patch32`) via `transformers` |
+| Tensor inference | PyTorch (`torch`) |
+| Image handling | Pillow (`PIL`) |
+| LLM (NLP) | Google Gemini (`google-generativeai`) |
+| PDF parsing | PyPDF2 |
+
+---
+
+## ⚙️ Setup & Configuration
+
+### 1. Clone the repository
 
 ```bash
-# Create virtual environment
-python -m venv venv
+git clone https://github.com/zev-walker/Astrovision.git
+cd Astrovision
+```
 
-# Activate it
-venv\Scripts\activate    # Windows
-source venv/bin/activate # Mac/Linux
+### 2. Install dependencies
 
-# Install dependencies
+```bash
 pip install -r requirements.txt
+```
 
-# Run the app
+### 3. Configure your Gemini API Key
+
+The Research Assistant requires a Google Gemini API key. AstroVision reads it from **Streamlit Secrets**.
+
+Create a `.streamlit/secrets.toml` file in the project root:
+
+```toml
+GEMINI_API_KEY = "your-gemini-api-key-here"
+```
+
+> Get a free API key at [https://aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey)
+
+The app auto-detects the best available Gemini model from your account at startup, preferring `gemini-1.5-flash` → `gemini-1.5-flash-001` → `gemini-pro` → `gemini-1.0-pro`.
+
+> **Note:** The Galaxy Classifier runs fully locally and does **not** require the API key.
+
+### 4. Run locally
+
+```bash
 streamlit run app.py
 ```
 
-Opens in browser at `http://localhost:8501`
+Opens at `http://localhost:8501`
 
 ---
 
-## 📝 Current App Features
+## 🚀 Deploying to Streamlit Cloud
 
-### 🔭 Galaxy Classifier
-- Upload galaxy images (JPG, PNG)
-- AI classifies into 5 types:
-  - Elliptical
-  - Spiral
-  - Barred Spiral
-  - Irregular
-  - Lenticular
-- Shows confidence scores
-- Visual probability charts
+1. Push your code to a public GitHub repository.
+2. Go to [https://share.streamlit.io](https://share.streamlit.io) and sign in with GitHub.
+3. Click **"New app"** and fill in:
+   - **Repository:** `your-username/Astrovision`
+   - **Branch:** `main`
+   - **Main file path:** `app.py`
+4. Under **Advanced settings → Secrets**, add:
+   ```
+   GEMINI_API_KEY = "your-gemini-api-key-here"
+   ```
+5. Click **"Deploy!"** and wait 2–5 minutes.
 
-### 📚 Paper Analyzer
-- Upload astronomy papers (PDF)
-- Auto-generate summaries (3 lengths)
-- Ask questions about paper
-- Get instant answers
-- Extract key insights
-
-### 📊 Dashboard
-- View usage statistics
-- Classification trends
-- Activity log
-
----
-
-## ⚠️ Important Notes
-
-### About the Current Model
-
-**The app is using a DEMO model right now:**
-- ✅ Works and demonstrates functionality
-- ✅ Gives realistic-looking predictions
-- ❌ Not trained on real galaxy data yet
-
-**To get a REAL trained model later:**
-1. Download actual galaxy dataset
-2. Train model locally (I'll help you!)
-3. Replace the model in the code
-4. Redeploy
-
-### NLP Models
-
-The Paper Analyzer uses **pre-trained models** from Hugging Face:
-- BART for summarization
-- DistilBERT for Q&A
-- These are **already trained** and work immediately!
+> **First load is slow** — CLIP downloads ~600 MB of model weights on first run. Streamlit caches the model after that (`@st.cache_resource`), so subsequent loads are fast.
 
 ---
 
 ## 🔧 Troubleshooting
 
-### Problem: App won't deploy
-**Check:**
-- Files are in the root of the repository (not in a folder)
-- `requirements.txt` is spelled correctly
-- Repository is public
+| Problem | Solution |
+|---|---|
+| `⚠️ API Key Missing` shown in sidebar | Add `GEMINI_API_KEY` to Streamlit Secrets (`.streamlit/secrets.toml` locally, or the Secrets panel on Streamlit Cloud) |
+| `⚠️ Key found, but no models available` | Your API key is valid but no Gemini models with `generateContent` support were returned — check your Google Cloud project quota |
+| Slow first load | Normal — CLIP model weights are downloading. They are cached after the first run |
+| PDF not loading / empty text | Some scanned PDFs contain no extractable text. `PyPDF2` only handles text-based PDFs |
+| `app.py` not found on deploy | Ensure `app.py` and `requirements.txt` are in the **root** of the repository, not inside a subfolder |
 
-### Problem: Import errors
-**Solution:** Streamlit Cloud will automatically install dependencies from `requirements.txt`. Wait for deployment to complete.
+---
 
-### Problem: NLP models too large
-If you get memory errors, you can comment out the NLP section temporarily:
-```python
-# In app.py, comment out the Paper Analyzer page
-# We'll optimize it later
+## 📁 Repository Structure
+
 ```
-
-### Problem: Slow first load
-**This is normal!** First time loading takes 2-3 minutes as models download. After that, it's fast.
-
----
-
-## 📈 Next Steps (After Deployment)
-
-1. ✅ **Share your app** with friends/teachers
-2. ✅ **Test all features** to make sure they work
-3. ✅ **Get feedback** from users
-4. 🎓 **Train your own model** (I'll help when ready!)
-5. 🔄 **Replace demo model** with your trained one
-6. ✨ **Add more features** (we can enhance it!)
-
----
-
-## 🆘 Need Help?
-
-Common issues and solutions:
-
-| Issue | Solution |
-|-------|----------|
-| "No module named 'tensorflow'" | Check `requirements.txt` is in the repo |
-| App crashes on image upload | Check image file size < 200MB |
-| PDF analyzer not working | Ensure `PyPDF2` is in requirements |
-| Slow predictions | Normal for first load, caches after |
-
----
-
-## 🎯 When You're Ready to Train Your Own Model
-
-**I'll help you with:**
-1. Download proper galaxy dataset from Kaggle
-2. Create training script
-3. Train on your RTX 3050 (1-2 hours)
-4. Export trained model
-5. Upload to GitHub (handling large file)
-6. Update app.py to use your model
-7. Redeploy!
-
-**Just let me know when you want to do this!** 🚀
+Astrovision/
+├── app.py            # Main Streamlit application (single-file)
+├── requirements.txt  # Python dependencies
+└── README.md
+```
 
 ---
 
 ## 📚 Resources
 
-- **Streamlit Docs:** https://docs.streamlit.io
-- **Galaxy Zoo Dataset:** https://www.kaggle.com/c/galaxy-zoo-the-galaxy-challenge
-- **Hugging Face Models:** https://huggingface.co/models
-- **Your Live App:** (You'll get this after deployment!)
+- [Streamlit Documentation](https://docs.streamlit.io)
+- [CLIP on Hugging Face](https://huggingface.co/openai/clip-vit-base-patch32)
+- [Google Gemini API](https://aistudio.google.com)
+- [Galaxy Zoo Dataset (Kaggle)](https://www.kaggle.com/c/galaxy-zoo-the-galaxy-challenge)
 
 ---
 
