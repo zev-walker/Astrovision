@@ -1,86 +1,78 @@
 # 🌌 AstroVision
-### Deep Learning Galaxy Morphology & Research Assistant
 
-AstroVision is a two-module Streamlit application that combines a zero-shot Vision Transformer (CLIP) for galaxy image classification with a Gemini-powered LLM for astronomy research paper analysis.
+An AI-powered astronomy tool that combines a **zero-shot deep learning vision model** (CLIP) for galaxy morphology classification with a **large language model** (Google Gemini) for astronomy research paper analysis.
 
 ---
 
-## ✨ Features
+## 🔭 Modules
 
-### 🔭 Module 1 — Galaxy Classifier (Deep Learning)
+### 1. Galaxy Morphology Classifier
+Upload a galaxy image and AstroVision uses OpenAI's CLIP Vision Transformer to classify it — with no task-specific training required (zero-shot).
 
-Upload a galaxy image and AstroVision will classify it using **CLIP (`openai/clip-vit-base-patch32`)**, a zero-shot Vision Transformer from OpenAI via Hugging Face Transformers. No fine-tuning required — classification runs entirely locally via PyTorch.
-
-**Supported galaxy types:**
+**Classifies into 5 morphological types:**
 - Spiral Galaxy
 - Elliptical Galaxy
 - Edge-on Disk
 - Irregular Galaxy
-- Merger (two colliding galaxies)
+- Merger
 
-**Output:**
-- Top predicted class with confidence score
-- Bar chart of probability distribution across all 5 classes
+Returns a confidence score and a probability bar chart for all classes.
 
----
+### 2. Research Paper Assistant
+Upload an astronomy research paper (PDF) and interact with it using Google Gemini.
 
-### 📄 Module 2 — Research Assistant (NLP)
-
-Upload an astronomy research paper (PDF) and interact with it using **Google Gemini**.
-
-**Sub-features:**
-- **📝 Summarization** — Generate a summary at one of three detail levels: *Brief Abstract*, *Key Findings*, or *Comprehensive Analysis*
-- **💬 Q&A System** — Ask technical questions about the paper; Gemini answers strictly based on the paper's content
-
-PDF text is extracted using `PyPDF2`. Up to 50,000 characters of the paper are sent to Gemini per request.
+**Features:**
+- **Summarization** — Choose from three detail levels: Brief Abstract, Key Findings, or Comprehensive Analysis
+- **Q&A System** — Ask technical questions and get answers grounded strictly in the uploaded paper
 
 ---
 
-## 🛠️ Tech Stack
+## ⚙️ Tech Stack
 
-| Component | Library / Service |
+| Component | Technology |
 |---|---|
-| App framework | Streamlit |
-| Vision model | CLIP (`openai/clip-vit-base-patch32`) via `transformers` |
-| Tensor inference | PyTorch (`torch`) |
-| Image handling | Pillow (`PIL`) |
-| LLM (NLP) | Google Gemini (`google-generativeai`) |
-| PDF parsing | PyPDF2 |
+| UI Framework | Streamlit |
+| Vision Model | OpenAI CLIP (`clip-vit-base-patch32`) via HuggingFace Transformers |
+| Deep Learning Backend | PyTorch |
+| LLM | Google Gemini API (auto-selects best available model at runtime) |
+| PDF Processing | PyPDF2 |
+| Image Processing | Pillow (PIL) |
 
 ---
 
-## ⚙️ Setup & Configuration
+## 🤖 Gemini Model Auto-Selection
 
-### 1. Clone the repository
+The app automatically queries the Gemini API at startup to find the best available model. It checks in this priority order:
 
-```bash
-git clone https://github.com/zev-walker/Astrovision.git
-cd Astrovision
-```
+1. `gemini-1.5-flash`
+2. `gemini-1.5-flash-001`
+3. `gemini-pro`
+4. `gemini-1.0-pro`
+5. Falls back to the first available model if none of the above are found
 
-### 2. Install dependencies
+This prevents hardcoded model name failures.
+
+---
+
+## 🚀 Running the App
+
+### Prerequisites
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Configure your Gemini API Key
+### API Key Setup
 
-The Research Assistant requires a Google Gemini API key. AstroVision reads it from **Streamlit Secrets**.
-
-Create a `.streamlit/secrets.toml` file in the project root:
+Create a `.streamlit/secrets.toml` file in your project folder:
 
 ```toml
-GEMINI_API_KEY = "your-gemini-api-key-here"
+GEMINI_API_KEY = "your_api_key_here"
 ```
 
-> Get a free API key at [https://aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey)
+Get your free Gemini API key at [aistudio.google.com](https://aistudio.google.com)
 
-The app auto-detects the best available Gemini model from your account at startup, preferring `gemini-1.5-flash` → `gemini-1.5-flash-001` → `gemini-pro` → `gemini-1.0-pro`.
-
-> **Note:** The Galaxy Classifier runs fully locally and does **not** require the API key.
-
-### 4. Run locally
+### Run Locally
 
 ```bash
 streamlit run app.py
@@ -90,54 +82,17 @@ Opens at `http://localhost:8501`
 
 ---
 
-## 🚀 Deploying to Streamlit Cloud
+## 📝 Notes
 
-1. Push your code to a public GitHub repository.
-2. Go to [https://share.streamlit.io](https://share.streamlit.io) and sign in with GitHub.
-3. Click **"New app"** and fill in:
-   - **Repository:** `your-username/Astrovision`
-   - **Branch:** `main`
-   - **Main file path:** `app.py`
-4. Under **Advanced settings → Secrets**, add:
-   ```
-   GEMINI_API_KEY = "your-gemini-api-key-here"
-   ```
-5. Click **"Deploy!"** and wait 2–5 minutes.
-
-> **First load is slow** — CLIP downloads ~600 MB of model weights on first run. Streamlit caches the model after that (`@st.cache_resource`), so subsequent loads are fast.
+- CLIP model (`~600 MB`) downloads automatically on first run and is cached after that
+- PDF text is capped at 50,000 characters when sent to Gemini
+- The app uses a space-themed dark UI built with custom CSS
 
 ---
 
-## 🔧 Troubleshooting
+## 🛠️ Built With
 
-| Problem | Solution |
-|---|---|
-| `⚠️ API Key Missing` shown in sidebar | Add `GEMINI_API_KEY` to Streamlit Secrets (`.streamlit/secrets.toml` locally, or the Secrets panel on Streamlit Cloud) |
-| `⚠️ Key found, but no models available` | Your API key is valid but no Gemini models with `generateContent` support were returned — check your Google Cloud project quota |
-| Slow first load | Normal — CLIP model weights are downloading. They are cached after the first run |
-| PDF not loading / empty text | Some scanned PDFs contain no extractable text. `PyPDF2` only handles text-based PDFs |
-| `app.py` not found on deploy | Ensure `app.py` and `requirements.txt` are in the **root** of the repository, not inside a subfolder |
-
----
-
-## 📁 Repository Structure
-
-```
-Astrovision/
-├── app.py            # Main Streamlit application (single-file)
-├── requirements.txt  # Python dependencies
-└── README.md
-```
-
----
-
-## 📚 Resources
-
-- [Streamlit Documentation](https://docs.streamlit.io)
-- [CLIP on Hugging Face](https://huggingface.co/openai/clip-vit-base-patch32)
-- [Google Gemini API](https://aistudio.google.com)
-- [Galaxy Zoo Dataset (Kaggle)](https://www.kaggle.com/c/galaxy-zoo-the-galaxy-challenge)
-
----
-
-**Built with ❤️ for Astronomy and AI**
+- [Streamlit](https://streamlit.io)
+- [HuggingFace Transformers](https://huggingface.co/openai/clip-vit-base-patch32)
+- [Google Gemini API](https://ai.google.dev)
+- [PyTorch](https://pytorch.org)
